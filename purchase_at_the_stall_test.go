@@ -47,14 +47,9 @@ func (p *StallPurchaseOrderEventProcessor) Action(action string, fromState State
 			fmt.Println("禁用此货源")
 		}
 
-	case "生成络采购单":
+	case "生成络采购单","生成次日网络采购单":
 		{
-			//fmt.Println("生成当日网络采购单")
-		}
-
-	case "生成次日网络采购单":
-		{
-			//fmt.Println("生成次日网络采购单")
+			fmt.Println("生成网络采购单")
 		}
 
 	case "此货源冻结2天2天不使用此货源采购，关闭拿货采购单状态无效":
@@ -66,11 +61,6 @@ func (p *StallPurchaseOrderEventProcessor) Action(action string, fromState State
 		{
 			ts.effective = rand.Intn(2)
 		}
-
-	case "送至仓库":
-
-	case "收货":
-
 	default: //其它action
 
 	}
