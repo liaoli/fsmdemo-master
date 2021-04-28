@@ -1,5 +1,5 @@
 // gofsm is a simple, featured FSM implementation that has some different features with other FSM implementation.
-// One feature of gofsm is it doesn't persist/keep states of objects. When it processes transitions, you must pass current states to id, so you can look gofsm as a "stateless" state machine. This benefit is one gofsm instance can be used to handle transitions of a lot of object instances, instead of creating a lot of FSM instances. Object instances maintain their states themselves.
+// One feature of gofsm is it doesn't persist/keep states of objects. When it processes transitions, you must pass current states to Id, so you can look gofsm as a "stateless" state machine. This benefit is one gofsm instance can be used to handle transitions of a lot of object instances, instead of creating a lot of FSM instances. Object instances maintain their states themselves.
 // Another feature is it provides a common interface for Moore and Mealy FSM. You can implement corresponding methods (OnExit, Action, OnEnter) for those two FSM.
 // The third interesting feature is you can export configured transitions into a state diagram. A picture is worth a thousand words.
 
@@ -16,16 +16,22 @@ import (
 
 // Transition is a state transition and all data are literal values that simplifies FSM usage and make it generic.
 type Transition struct {
-	From   string
+	From   State
 	Event  string
-	To     string
+	To     State
 	Action string
+}
+
+type State struct {
+	Id          int64
+	Name        string
+	Description string
 }
 
 // Delegate is used to process actions. Because gofsm uses literal values as event, state and action, you need to handle them with corresponding functions. DefaultDelegate is the default delegate implementation that splits the processing into three actions: OnExit Action, Action and OnEnter Action. you can implement different delegates.
 type Delegate interface {
 	// HandleEvent handles transitions
-	HandleEvent(action string, fromState string, toState string, args []interface{}) error
+	HandleEvent(action string, fromState State, toState State, args []interface{}) error
 }
 
 // StateMachine is a FSM that can handle transitions of a lot of objects. delegate and transitions are configured before use them.
@@ -64,23 +70,27 @@ func NewStateMachine(delegate Delegate, transitions ...Transition) *StateMachine
 }
 
 // Trigger fires a event. You must pass current state of the processing object, other info about this object can be passed with args.
-func (m *StateMachine) Trigger(currentState string, event string, args ...interface{}) error {
+func (m *StateMachine) Trigger(currentState State, event string, args ...interface{}) error {
 	trans := m.findTransMatching(currentState, event)
 	if trans == nil {
-		return smError{event, currentState}
+		return smError{event, currentState.Name}
 	}
 
 	var err error
 	//if trans.Action != "" {
-		err = m.delegate.HandleEvent(trans.Action, currentState, trans.To, args)
+	err = m.delegate.HandleEvent(trans.Action, currentState, trans.To, args)
 	//}
 	return err
 }
 
 // findTransMatching gets corresponding transition according to current state and event.
-func (m *StateMachine) findTransMatching(fromState string, event string) *Transition {
+func (m *StateMachine) findTransMatching(fromState State, event string) *Transition {
 	for _, v := range m.transitions {
-		if v.From == fromState && v.Event == event {
+		//if v.From == fromState && v.Event == event {
+		//	return &v
+		//}
+
+		if v.From.Name == fromState.Name && v.From.Id == fromState.Id && v.Event == event {
 			return &v
 		}
 	}
@@ -102,7 +112,7 @@ func (m *StateMachine) ExportWithDetails(outfile string, format string, layout s
 	`
 
 	for _, t := range m.transitions {
-		link := fmt.Sprintf(`%s -> %s [label="%s | %s"]`, t.From, t.To, t.Event, t.Action)
+		link := fmt.Sprintf(`%s -> %s [label="%s | %s"]`, t.From.Name, t.To.Name, t.Event, t.Action)
 		dot = dot + "\r\n" + link
 	}
 
