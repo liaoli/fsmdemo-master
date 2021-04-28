@@ -115,13 +115,13 @@ var Purchasing = State{
 var Purchasefailed = State{
 	2,
 	"采购失败",
-	"什么原因采购失败的",
+	"",
 }
 
 var PurchaseSuccessful = State{
 	3,
 	"采购成功",
-	"已发货运输中",
+	"",
 }
 
 var PurchaseEnd = State{
