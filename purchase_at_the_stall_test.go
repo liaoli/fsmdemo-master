@@ -123,9 +123,13 @@ var PurchaseSuccessful = State{
 	"采购成功",
 	"",
 }
-
-var PurchaseEnd = State{
+var BeingTransported = State{
 	4,
+	"运输中",
+	"",
+}
+var PurchaseEnd = State{
+	5,
 	"结束",
 	"",
 }
@@ -264,7 +268,7 @@ func TestStallOrder(t *testing.T) {
 
 	}
 
-	//fsm.Export("state.png")
+	fsm.Export("state.png")
 
 }
 
@@ -283,8 +287,8 @@ func initStallOrderFSM() *StateMachine {
 	transitions := []Transition{
 		{From: PendingPuchase, Event: Go2Stall, To: Purchasing, Action: "获取拿货结果"},
 		{From: Purchasing, Event: GotTheGoods, To: PurchaseSuccessful, Action: ""},
-		{From: PurchaseSuccessful, Event: SendToWarehouse, To: PurchaseSuccessful, Action: ""},
-		{From: PurchaseSuccessful, Event: Received, To: PurchaseEnd, Action: ""},
+		{From: PurchaseSuccessful, Event: SendToWarehouse, To: BeingTransported, Action: ""},
+		{From: BeingTransported, Event: Received, To: PurchaseEnd, Action: ""},
 		{From: Purchasing, Event: HasBeenRemoved, To: Purchasefailed, Action: "禁用此货源"},
 		{From: Purchasefailed, Event: Urgent, To: PurchaseEnd, Action: "生成当日网络采购单"},
 		{From: Purchasefailed, Event: NotUrgent, To: PurchaseEnd, Action: "生成次日网络采购单"},
