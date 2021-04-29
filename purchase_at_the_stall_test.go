@@ -32,11 +32,11 @@ func (p *StallPurchaseOrderEventProcessor) OnExit(fromState State, args []interf
 	log.Printf("采购单 %d 从状态 %v 改变", t.ID, fromState)
 }
 
-func (p *StallPurchaseOrderEventProcessor) Action(action string, fromState State, toState State, args []interface{}) error {
+func (p *StallPurchaseOrderEventProcessor) Action(action Action, fromState State, toState State, args []interface{}) error {
 	ts := args[0].(*StallPurchaseOrder)
 	ts.EventCount++
 
-	switch action {
+	switch action.Name {
 
 	case "获取拿货结果":
 		{
@@ -94,104 +94,10 @@ func (p *StallPurchaseOrderEventProcessor) OnEnter(toState State, args []interfa
 	log.Printf("采购单 %d 的状态改变为 %v ", t.ID, toState)
 }
 
-func (p *StallPurchaseOrderEventProcessor) OnActionFailure(action string, fromState State, toState State, args []interface{}, err error) {
+func (p *StallPurchaseOrderEventProcessor) OnActionFailure(action Action, fromState State, toState State, args []interface{}, err error) {
 	t := args[0].(*StallPurchaseOrder)
 
 	log.Printf("采购单 %d 的状态从 %v to %v 改变失败， 原因: %v", t.ID, fromState, toState, err)
-}
-
-var PendingPuchase = State{
-	0,
-	"待采购",
-	"",
-}
-
-var Purchasing = State{
-	1,
-	"采购中",
-	"",
-}
-
-var Purchasefailed = State{
-	2,
-	"采购失败",
-	"",
-}
-
-var PurchaseSuccessful = State{
-	3,
-	"采购成功",
-	"",
-}
-var BeingTransported = State{
-	4,
-	"运输中",
-	"",
-}
-var PurchaseEnd = State{
-	5,
-	"结束",
-	"",
-}
-
-var Invalid = State{
-	0,
-	"无效状态",
-	"",
-}
-
-var Go2Stall = Event{
-	0,
-	"去档口拿货",
-}
-
-var GotTheGoods = Event{
-	1,
-	"拿货成功",
-}
-
-var SendToWarehouse = Event{
-	2,
-	"运送中",
-}
-
-var Received = Event{
-	3,
-	"已收货",
-}
-
-var HasBeenRemoved = Event{
-	4,
-	"该商品已经下架",
-}
-var TwoDaysLater = Event{
-	5,
-	"后天拿到货",
-}
-
-var OneDaysLater = Event{
-	6,
-	"明天拿到货",
-}
-
-var Overdue = Event{
-	7,
-	"拿货超过有效期",
-}
-
-var NotExpired = Event{
-	8,
-	"拿货未超过有效期",
-}
-
-var Urgent = Event{
-	9,
-	"优先级(紧急)",
-}
-
-var NotUrgent = Event{
-	10,
-	"优先级(非紧急)",
 }
 
 func TestStallOrder(t *testing.T) {
@@ -285,17 +191,17 @@ func initStallOrderFSM() *StateMachine {
 	delegate := &DefaultDelegate{P: &StallPurchaseOrderEventProcessor{}}
 
 	transitions := []Transition{
-		{From: PendingPuchase, Event: Go2Stall, To: Purchasing, Action: "获取拿货结果"},
-		{From: Purchasing, Event: GotTheGoods, To: PurchaseSuccessful, Action: ""},
-		{From: PurchaseSuccessful, Event: SendToWarehouse, To: BeingTransported, Action: ""},
-		{From: BeingTransported, Event: Received, To: PurchaseEnd, Action: ""},
-		{From: Purchasing, Event: HasBeenRemoved, To: Purchasefailed, Action: "禁用此货源"},
-		{From: Purchasefailed, Event: Urgent, To: PurchaseEnd, Action: "生成当日网络采购单"},
-		{From: Purchasefailed, Event: NotUrgent, To: PurchaseEnd, Action: "生成次日网络采购单"},
-		{From: Purchasing, Event: TwoDaysLater, To: Purchasefailed, Action: "此货源冻结2天2天不使用此货源采购，关闭拿货采购单状态无效"},
-		{From: Purchasing, Event: OneDaysLater, To: Purchasing, Action: "检测拿货时效"},
-		{From: Purchasing, Event: Overdue, To: Purchasefailed, Action: ""},
-		{From: Purchasing, Event: NotExpired, To: PendingPuchase, Action: ""},
+		{From: PendingPuchase, Event: Go2Stall, To: Purchasing, Action: GetTheResults},
+		{From: Purchasing, Event: GotTheGoods, To: PurchaseSuccessful, Action: NoAction},
+		{From: PurchaseSuccessful, Event: SendToWarehouse, To: BeingTransported, Action: NoAction},
+		{From: BeingTransported, Event: Received, To: PurchaseEnd, Action: NoAction},
+		{From: Purchasing, Event: HasBeenRemoved, To: Purchasefailed, Action: DisableSecondarySources},
+		{From: Purchasefailed, Event: Urgent, To: PurchaseEnd, Action: GenerateTodayOnlineOrder},
+		{From: Purchasefailed, Event: NotUrgent, To: PurchaseEnd, Action: GenerateTomorrowOnlineOrder},
+		{From: Purchasing, Event: TwoDaysLater, To: Purchasefailed, Action: SourceFreeze2Days},
+		{From: Purchasing, Event: OneDaysLater, To: Purchasing, Action: TestingTime},
+		{From: Purchasing, Event: Overdue, To: Purchasefailed, Action: NoAction},
+		{From: Purchasing, Event: NotExpired, To: PendingPuchase, Action: NoAction},
 	}
 
 	return NewStateMachine(delegate, transitions...)

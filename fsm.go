@@ -19,7 +19,7 @@ type Transition struct {
 	From State
 	Event
 	To     State
-	Action string
+	Action
 }
 
 type State struct {
@@ -33,10 +33,15 @@ type Event struct {
 	Name string
 }
 
+type Action struct {
+	Id int64
+	Name string
+}
+
 // Delegate is used to process actions. Because gofsm uses literal values as event, state and action, you need to handle them with corresponding functions. DefaultDelegate is the default delegate implementation that splits the processing into three actions: OnExit Action, Action and OnEnter Action. you can implement different delegates.
 type Delegate interface {
 	// HandleEvent handles transitions
-	HandleEvent(action string, fromState State, toState State, args []interface{}) error
+	HandleEvent(action Action, fromState State, toState State, args []interface{}) error
 }
 
 // StateMachine is a FSM that can handle transitions of a lot of objects. delegate and transitions are configured before use them.
@@ -117,7 +122,7 @@ func (m *StateMachine) ExportWithDetails(outfile string, format string, layout s
 	`
 
 	for _, t := range m.transitions {
-		link := fmt.Sprintf(`%s -> %s [label="%s | %s"]`, t.From.Name, t.To.Name, t.Event.Name, t.Action)
+		link := fmt.Sprintf(`%s -> %s [label="%s | %s"]`, t.From.Name, t.To.Name, t.Event.Name, t.Event.Name)
 		dot = dot + "\r\n" + link
 	}
 
