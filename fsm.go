@@ -16,8 +16,8 @@ import (
 
 // Transition is a state transition and all data are literal values that simplifies FSM usage and make it generic.
 type Transition struct {
-	From   State
-	Event  string
+	From State
+	Event
 	To     State
 	Action string
 }
@@ -26,6 +26,11 @@ type State struct {
 	Id          int64
 	Name        string
 	Description string
+}
+
+type Event struct {
+	Id   int64
+	Name string
 }
 
 // Delegate is used to process actions. Because gofsm uses literal values as event, state and action, you need to handle them with corresponding functions. DefaultDelegate is the default delegate implementation that splits the processing into three actions: OnExit Action, Action and OnEnter Action. you can implement different delegates.
@@ -43,24 +48,24 @@ type StateMachine struct {
 // Error is an error when processing event and state changing.
 type Error interface {
 	error
-	BadEvent() string
-	CurrentState() string
+	BadEvent() Event
+	CurrentState() State
 }
 
 type smError struct {
-	badEvent     string
-	currentState string
+	badEvent     Event
+	currentState State
 }
 
 func (e smError) Error() string {
-	return fmt.Sprintf("state machine error: cannot find transition for event [%s] when in state [%s]\n", e.badEvent, e.currentState)
+	return fmt.Sprintf("state machine error: cannot find transition for event [%v] when in state [%v]\n", e.badEvent, e.currentState)
 }
 
-func (e smError) BadEvent() string {
+	func (e smError) BadEvent() Event {
 	return e.badEvent
 }
 
-func (e smError) CurrentState() string {
+func (e smError) CurrentState() State {
 	return e.currentState
 }
 
@@ -70,10 +75,10 @@ func NewStateMachine(delegate Delegate, transitions ...Transition) *StateMachine
 }
 
 // Trigger fires a event. You must pass current state of the processing object, other info about this object can be passed with args.
-func (m *StateMachine) Trigger(currentState State, event string, args ...interface{}) error {
+func (m *StateMachine) Trigger(currentState State, event Event, args ...interface{}) error {
 	trans := m.findTransMatching(currentState, event)
 	if trans == nil {
-		return smError{event, currentState.Name}
+		return smError{event, currentState}
 	}
 
 	var err error
@@ -84,13 +89,13 @@ func (m *StateMachine) Trigger(currentState State, event string, args ...interfa
 }
 
 // findTransMatching gets corresponding transition according to current state and event.
-func (m *StateMachine) findTransMatching(fromState State, event string) *Transition {
+func (m *StateMachine) findTransMatching(fromState State, event Event) *Transition {
 	for _, v := range m.transitions {
 		//if v.From == fromState && v.Event == event {
 		//	return &v
 		//}
 
-		if v.From.Name == fromState.Name && v.From.Id == fromState.Id && v.Event == event {
+		if v.From.Name == fromState.Name && v.From.Id == fromState.Id && v.Event.Id == event.Id {
 			return &v
 		}
 	}
@@ -112,7 +117,7 @@ func (m *StateMachine) ExportWithDetails(outfile string, format string, layout s
 	`
 
 	for _, t := range m.transitions {
-		link := fmt.Sprintf(`%s -> %s [label="%s | %s"]`, t.From.Name, t.To.Name, t.Event, t.Action)
+		link := fmt.Sprintf(`%s -> %s [label="%s | %s"]`, t.From.Name, t.To.Name, t.Event.Name, t.Action)
 		dot = dot + "\r\n" + link
 	}
 
