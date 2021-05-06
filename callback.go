@@ -4,11 +4,16 @@ package fsm
 type EventProcessor interface {
 	// OnExit Action handles exiting a state
 	OnExit(fromState State, args []interface{})
-	// Action is used to handle transitions
-	Action(action Action, fromState State, toState State, args []interface{}) error
+	// PreAction is used to handle transitions
+	PreAction(action Action, fromState State, toState State, args []interface{}) error
+
+	// NextAction is used to handle transitions
+	NextAction(action Action, fromState State, toState State, args []interface{}) error
+
 	// OnActionFailure failed to execute the Action
 	OnActionFailure(action Action, fromState State, toState State, args []interface{}, err error)
-	// OnExit Action handles entering a state
+
+	// OnEnter Action handles entering a state
 	OnEnter(toState State, args []interface{})
 }
 
@@ -19,21 +24,31 @@ type DefaultDelegate struct {
 }
 
 // HandleEvent implements Delegate interface and split HandleEvent into three actions.
-func (dd *DefaultDelegate) HandleEvent(action Action, fromState State, toState State, args []interface{}) error {
+func (dd *DefaultDelegate) HandleEvent(preAction Action, nextAction Action, fromState State, toState State, args []interface{}) error {
 	if fromState != toState {
 		dd.P.OnExit(fromState, args)
 	}
 
+	var err error
+	if preAction.Id > 0 {
+		err = dd.P.PreAction(preAction, fromState, toState, args)
 
-
-	err := dd.P.Action(action, fromState, toState, args)
-	if err != nil {
-		dd.P.OnActionFailure(action, fromState, toState, args, err)
-		return err
+		if err != nil {
+			dd.P.OnActionFailure(preAction, fromState, toState, args, err)
+			return err
+		}
 	}
 
 	if fromState != toState {
 		dd.P.OnEnter(toState, args)
+	}
+
+	if nextAction.Id > 0 {
+		err = dd.P.NextAction(nextAction, fromState, toState, args)
+		if err != nil {
+			dd.P.OnActionFailure(nextAction, fromState, toState, args, err)
+			return err
+		}
 	}
 
 	return nil

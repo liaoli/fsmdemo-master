@@ -32,7 +32,43 @@ func (p *StallPurchaseOrderEventProcessor) OnExit(fromState State, args []interf
 	log.Printf("采购单 %d 从状态 %v 改变", t.ID, fromState)
 }
 
-func (p *StallPurchaseOrderEventProcessor) Action(action Action, fromState State, toState State, args []interface{}) error {
+func (p *StallPurchaseOrderEventProcessor) PreAction(action Action, fromState State, toState State, args []interface{}) error {
+	ts := args[0].(*StallPurchaseOrder)
+	ts.EventCount++
+
+	switch action.Name {
+
+	case "获取拿货结果":
+		{
+			ts.GetGoodsResults = int64(rand.Intn(4))
+		}
+	case "禁用此货源":
+		{
+			fmt.Println("禁用此货源")
+		}
+
+	case "生成络采购单", "生成次日网络采购单":
+		//{
+		//	fmt.Println("生成网络采购单")
+		//}
+
+	case "此货源冻结2天2天不使用此货源采购，关闭拿货采购单状态无效":
+
+		{
+			fmt.Println("此货源冻结2天2天不使用此货源采购，关闭拿货采购单状态无效")
+		}
+	case "检测拿货时效":
+		{
+			ts.effective = rand.Intn(2)
+		}
+	default: //其它action
+
+	}
+
+	return nil
+}
+
+func (p *StallPurchaseOrderEventProcessor) NextAction(action Action, fromState State, toState State, args []interface{}) error {
 	ts := args[0].(*StallPurchaseOrder)
 	ts.EventCount++
 
@@ -134,7 +170,6 @@ func TestStallOrder(t *testing.T) {
 	if err != nil {
 		fmt.Printf("trigger err: %v", err)
 	}
-
 	switch ts.GetGoodsResults {
 	case 0:
 
@@ -191,17 +226,17 @@ func initStallOrderFSM() *StateMachine {
 	delegate := &DefaultDelegate{P: &StallPurchaseOrderEventProcessor{}}
 
 	transitions := []Transition{
-		{From: PendingPuchase, Event: Go2Stall, To: Purchasing, Action: GetTheResults},
-		{From: Purchasing, Event: GotTheGoods, To: PurchaseSuccessful, Action: NoAction},
-		{From: PurchaseSuccessful, Event: SendToWarehouse, To: BeingTransported, Action: NoAction},
-		{From: BeingTransported, Event: Received, To: PurchaseEnd, Action: NoAction},
-		{From: Purchasing, Event: HasBeenRemoved, To: Purchasefailed, Action: DisableSecondarySources},
-		{From: Purchasefailed, Event: Urgent, To: PurchaseEnd, Action: GenerateTodayOnlineOrder},
-		{From: Purchasefailed, Event: NotUrgent, To: PurchaseEnd, Action: GenerateTomorrowOnlineOrder},
-		{From: Purchasing, Event: TwoDaysLater, To: Purchasefailed, Action: SourceFreeze2Days},
-		{From: Purchasing, Event: OneDaysLater, To: Purchasing, Action: TestingTime},
-		{From: Purchasing, Event: Overdue, To: Purchasefailed, Action: NoAction},
-		{From: Purchasing, Event: NotExpired, To: PendingPuchase, Action: NoAction},
+		{From: PendingPuchase, Event: Go2Stall, To: Purchasing, PreAction: GetTheResults},
+		{From: Purchasing, Event: GotTheGoods, To: PurchaseSuccessful, PreAction: NoAction},
+		{From: PurchaseSuccessful, Event: SendToWarehouse, To: BeingTransported, PreAction: NoAction},
+		{From: BeingTransported, Event: Received, To: PurchaseEnd, PreAction: NoAction},
+		{From: Purchasing, Event: HasBeenRemoved, To: Purchasefailed, PreAction: DisableSecondarySources},
+		{From: Purchasefailed, Event: Urgent, To: PurchaseEnd, PreAction: GenerateTodayOnlineOrder},
+		{From: Purchasefailed, Event: NotUrgent, To: PurchaseEnd, PreAction: GenerateTomorrowOnlineOrder},
+		{From: Purchasing, Event: TwoDaysLater, To: Purchasefailed, PreAction: SourceFreeze2Days},
+		{From: Purchasing, Event: OneDaysLater, To: Purchasing, PreAction: TestingTime},
+		{From: Purchasing, Event: Overdue, To: Purchasefailed, PreAction: NoAction},
+		{From: Purchasing, Event: NotExpired, To: PendingPuchase, PreAction: NoAction},
 	}
 
 	return NewStateMachine(delegate, transitions...)
