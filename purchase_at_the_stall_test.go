@@ -145,6 +145,8 @@ func TestStallOrder(t *testing.T) {
 		States:   []State{PendingPuchase},
 	}
 
+
+	
 	ts.priority = int64(rand.Intn(2))
 	fsm := initStallOrderFSM()
 
