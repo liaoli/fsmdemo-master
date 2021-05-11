@@ -173,6 +173,9 @@ func TestStallOrder(t *testing.T) {
 	switch ts.GetGoodsResults {
 	case 0:
 
+
+
+		
 		err = fsm.Trigger(ts.CurState, SendToWarehouse, ts, fsm)
 		ts.PreEvent = SendToWarehouse
 		if err != nil {
