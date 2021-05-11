@@ -39,17 +39,17 @@ func (dd *DefaultDelegate) HandleEvent(preAction Action, nextAction Action, from
 		}
 	}
 
-	if fromState != toState {
+	if err == nil && fromState != toState  {
 		dd.P.OnEnter(toState, args)
-	}
-
-	if nextAction.Id > 0 {
-		err = dd.P.NextAction(nextAction, fromState, toState, args)
-		if err != nil {
-			dd.P.OnActionFailure(nextAction, fromState, toState, args, err)
-			return err
+		if nextAction.Id > 0 {
+			err = dd.P.NextAction(nextAction, fromState, toState, args)
+			if err != nil {
+				dd.P.OnActionFailure(nextAction, fromState, toState, args, err)
+				return err
+			}
 		}
+
 	}
 
-	return nil
+	return err
 }
